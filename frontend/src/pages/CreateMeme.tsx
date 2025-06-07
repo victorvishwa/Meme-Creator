@@ -111,7 +111,7 @@ const CreateMeme: React.FC = () => {
   const updateMemeState = (updates: Partial<MemeState>) => {
     const newState = { ...memeState, ...updates };
     setMemeState(newState);
-    
+
     // Add to history
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newState);
@@ -190,24 +190,24 @@ const CreateMeme: React.FC = () => {
 
     setLoading(true);
     const formData = new FormData();
-    
+
     // Convert text positions to decimal values
     const memeData = {
       ...memeState,
       topTextPosition: memeState.topTextPosition / 100,
       bottomTextPosition: memeState.bottomTextPosition / 100
     };
-    
+
     // Add all meme state properties
     Object.entries(memeData).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         formData.append(key, String(value));
       }
     });
-    
+
     // Add isDraft status
     formData.append('isDraft', String(isDraft));
-    
+
     // Handle image
     if (image) {
       formData.append('image', image);
@@ -246,7 +246,7 @@ const CreateMeme: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Meme Creation Studio</h1>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Preview Section */}
         <div className="bg-white rounded-lg shadow-lg p-6">
@@ -339,11 +339,10 @@ const CreateMeme: React.FC = () => {
                     key={filter.name}
                     type="button"
                     onClick={() => updateMemeState({ imageFilter: filter.filter })}
-                    className={`px-3 py-2 rounded-md text-sm font-medium ${
-                      memeState.imageFilter === filter.filter
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${memeState.imageFilter === filter.filter
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     {filter.name}
                   </button>
@@ -372,11 +371,10 @@ const CreateMeme: React.FC = () => {
                     key={style.name}
                     type="button"
                     onClick={() => handleStyleSelect(style)}
-                    className={`px-3 py-2 rounded-md text-sm font-medium ${
-                      selectedStyle === style.name
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${selectedStyle === style.name
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     {style.name}
                   </button>

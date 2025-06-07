@@ -1,117 +1,172 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { getMemes, getTrendingMemes, getWeeklyTrendingMemes, getHighlights } from '../api/memes';
-import type { Meme, MemesResponse } from '../api/memes';
+import React, { useState, useEffect } from 'react';
+import { Container, Box, Typography, CircularProgress } from '@mui/material';
+import FeedTabs, { FeedType } from '../components/FeedTabs';
 import MemeCard from '../components/MemeCard';
-import FeedTabs, { TabType } from '../components/FeedTabs';
-import TrendingHighlight from '../components/TrendingHighlight';
+import { Meme } from '../types';
+import { getMemes, voteMeme, addComment, flagMeme } from '../api/memes';
+import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
 
 const Home: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const [currentFeed, setCurrentFeed] = useState<FeedType>('new');
   const [memes, setMemes] = useState<Meme[]>([]);
-  const [highlights, setHighlights] = useState<Meme[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>('new');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const { user } = useAuth();
 
-  const fetchMemes = async (page: number, tab: TabType) => {
+  const fetchMemes = async () => {
     try {
-      let response: MemesResponse;
-      switch (tab) {
-        case 'top24h':
-          response = await getTrendingMemes(page);
-          break;
-        case 'topWeek':
-          response = await getWeeklyTrendingMemes(page);
-          break;
-        default:
-          response = await getMemes(page);
-      }
+      setLoading(true);
+      const response = await getMemes(currentFeed, page);
       if (page === 1) {
         setMemes(response.memes);
       } else {
-        setMemes(prev => [...prev, ...response.memes]);
+        setMemes((prev) => [...prev, ...response.memes]);
       }
-      setHasMore(response.memes.length === 10);
+      setHasMore(response.hasMore);
     } catch (error) {
+      console.error('Error fetching memes:', error);
       toast.error('Failed to load memes');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fetchHighlights = async () => {
+  useEffect(() => {
+    setPage(1);
+    setHasMore(true);
+    fetchMemes();
+  }, [currentFeed]);
+
+  const handleFeedChange = (feed: FeedType) => {
+    setCurrentFeed(feed);
+  };
+
+  const handleVote = async (memeId: string, voteType: 'up' | 'down') => {
+    if (!user) {
+      toast.error('Please log in to vote');
+      return;
+    }
+
     try {
-      const response = await getHighlights();
-      setHighlights(response);
+      const updatedMeme = await voteMeme(memeId, voteType);
+      setMemes((prev) =>
+        prev.map((meme) => (meme.id === memeId ? updatedMeme : meme))
+      );
     } catch (error) {
-      toast.error('Failed to load highlights');
+      console.error('Error voting:', error);
+      toast.error('Failed to record vote');
     }
   };
 
-  useEffect(() => {
-    setLoading(true);
-    setCurrentPage(1);
-    fetchMemes(1, activeTab);
-    fetchHighlights();
-    setLoading(false);
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (currentPage > 1) {
-      fetchMemes(currentPage, activeTab);
+  const handleComment = async (memeId: string, comment: string) => {
+    if (!user) {
+      toast.error('Please log in to comment');
+      return;
     }
-  }, [currentPage]);
 
-  const handleMemeUpdate = (updatedMeme: Meme) => {
-    setMemes(prev => prev.map(meme => 
-      meme._id === updatedMeme._id ? updatedMeme : meme
-    ));
-    setHighlights(prev => prev.map(meme => 
-      meme._id === updatedMeme._id ? updatedMeme : meme
-    ));
+    try {
+      const updatedMeme = await addComment(memeId, comment);
+      setMemes((prev) =>
+        prev.map((meme) => (meme.id === memeId ? updatedMeme : meme))
+      );
+      toast.success('Comment added successfully');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast.error('Failed to add comment');
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  const handleFlag = async (memeId: string) => {
+    if (!user) {
+      toast.error('Please log in to flag content');
+      return;
+    }
+
+    try {
+      await flagMeme(memeId);
+      toast.success('Content has been flagged for review');
+    } catch (error) {
+      console.error('Error flagging meme:', error);
+      toast.error('Failed to flag content');
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!loading && hasMore) {
+      setPage((prev) => prev + 1);
+      fetchMemes();
+    }
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="lg:w-3/4">
-          <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
-          <div className="space-y-8">
-            {memes.map(meme => (
-              <MemeCard
-                key={meme._id}
-                meme={meme}
-                onMemeUpdate={handleMemeUpdate}
-              />
-            ))}
-          </div>
-          {hasMore && (
-            <div className="mt-8 flex justify-center">
-              <button
-                onClick={() => setCurrentPage(prev => prev + 1)}
-                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Load More
-              </button>
-            </div>
-          )}
-        </div>
-        <div className="lg:w-1/4">
-          <TrendingHighlight memes={highlights} />
-        </div>
-      </div>
-    </div>
+    <Container maxWidth="md">
+      <Box sx={{ py: 4 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{
+            fontWeight: 700,
+            textAlign: 'center',
+            mb: 4,
+            background: 'linear-gradient(45deg, #6366f1, #ec4899)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            color: 'transparent',
+          }}
+        >
+          Meme Community
+        </Typography>
+
+        <FeedTabs currentFeed={currentFeed} onFeedChange={handleFeedChange} />
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {memes.map((meme) => (
+            <MemeCard
+              key={meme.id}
+              meme={meme}
+              onVote={handleVote}
+              onComment={handleComment}
+              onFlag={handleFlag}
+            />
+          ))}
+        </Box>
+
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <CircularProgress />
+          </Box>
+        )}
+
+        {!loading && hasMore && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <button
+              onClick={handleLoadMore}
+              style={{
+                padding: '8px 24px',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'linear-gradient(45deg, #6366f1, #ec4899)',
+                color: 'white',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'transform 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              Load More
+            </button>
+          </Box>
+        )}
+      </Box>
+    </Container>
   );
 };
 

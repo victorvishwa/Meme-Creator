@@ -48,10 +48,10 @@ const Dashboard: React.FC = () => {
   }, [user?._id, currentPage]);
 
   const handleMemeUpdate = (updatedMeme: Meme) => {
-    setMemes(memes.map(meme => 
+    setMemes(memes.map(meme =>
       meme._id === updatedMeme._id ? updatedMeme : meme
     ));
-    setTopMemes(topMemes.map(meme => 
+    setTopMemes(topMemes.map(meme =>
       meme._id === updatedMeme._id ? updatedMeme : meme
     ));
   };
@@ -69,7 +69,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold mb-2">Total Memes</h3>
